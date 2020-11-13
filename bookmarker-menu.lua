@@ -17,6 +17,8 @@ local confirmDelete = false
 local rate = 1.5
 -- The filename for the bookmarks file
 local bookmarkerName = "bookmarker.json"
+-- Whether to save a bookmark on shutdown
+local bookmarkOnShutdown = false
 
 -- All the "global" variables and utilities; don't touch these
 local utils = require 'mp.utils'
@@ -703,6 +705,18 @@ function handler()
   end
 end
 
+function saveAndQuit()
+  if not bookmarkOnShutdown then
+    quickSave()
+  end
+  utils.commandv("quit")
+end
+
 mp.register_script_message("bookmarker-menu", handler)
 mp.register_script_message("bookmarker-quick-save", quickSave)
 mp.register_script_message("bookmarker-quick-load", quickLoad)
+mp.register_script_message("bookmarker-quit", saveAndQuit)
+
+if bookmarkOnShutdown then
+  mp.register_event("shutdown", quickSave)
+end
