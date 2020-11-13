@@ -237,36 +237,52 @@ end
 
 -- // General utilities \\ --
 
+local _isUnix, _isMac, _pathSep
+
+function _detectOS() -- from VideoPlayerCode/modules.js/PathTools.js
+  -- Detect Unix/Linux/macOS if the path starts with a forward slash.
+  _isUnix = string.sub(utils.getcwd(), 1, 1) == '/'
+  _isMac = false -- Mac is also Unix, but we'll detect separately.
+  _pathSep = _isUnix and '/' or '\\'
+
+  if _isUnix then
+    local unameResult = utils.command_native({
+      name = "subprocess",
+      args = {"uname", "-s"},
+      cancellable = false,
+      capture_stdout = true
+    })
+    if unameResult:match "^%s*Darwin%s*$" then
+      _isMac = true
+    end
+  end
+end
+
 -- Check if the operating system is Mac OS
-function isMacOS()
-  local homedir = os.getenv("HOME")
-  return (homedir ~= nil and string.sub(homedir,1,6) == "/Users")
+function isMac()
+  if _isMac == nil then
+    _detectOS()
+  end
+  return _isMac
 end
 
 -- Check if the operating system is Windows
 function isWindows()
-  local windir = os.getenv("windir")
-  return (windir~=nil)
+  if _isUnix == nil then
+    _detectOS()
+  end
+  return not _isUnix
 end
 
 -- Check whether a certain file exists
 function fileExists(path)
-  local f = io.open(path,"r")
-  if f~=nil then
-    io.close(f)
-    return true
-  else
-    return false
-  end
+  local f = utils.file_info(path)
+  return f.is_file
 end
 
 -- Get the filepath of a file from the mpv config folder
 function getFilepath(filename)
-  if isWindows() then
-  	return os.getenv("APPDATA"):gsub("\\", "/") .. "/mpv/" .. filename
-  else	
-	return os.getenv("HOME") .. "/.config/mpv/" .. filename
-  end
+  return mp.command_native({"expand-path", "~~/" .. filename})
 end
 
 -- Load a table from a JSON file
